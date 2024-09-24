@@ -7,37 +7,36 @@
 */
 function composite(bgImg, fgImg, fgOpac, fgPos) {
     
-    // Set approriate pos, data, and width/height
-    const xPos = fgPos.x;
-    const yPos = fgPos.y;
-    const fgWidth = fgImg.width;
-    const fgHeight = fgImg.height;
-    const fgData = fgImg.data;
-    const bgData = bgImg.data;
+    const { width: bgWidth, height: bgHeight, data: bgData } = bgImg;
+    const { width: fgWidth, height: fgHeight, data: fgData } = fgImg;
+    const { x: fgX, y: fgY } = fgPos;
 
-    // Use nested loops to traverse through column and row
-    for (let y = 0; y < fgHeight; y++){ 
+    for (let y = 0; y < fgHeight; y++) {
         for (let x = 0; x < fgWidth; x++) {
+            const bgX = x + fgX;
+            const bgY = y + fgY;
 
-            // Store the bg position by adding onto the fg position
-            const bgX = x + xPos;
-            const bgY = y + yPos;
-            
-            // Check if the fgPos is negative, not on the bg, or exceeds the bg x and y
-            if (bgX >= 0 && bgY >= 0 && bgX < bgImg.width && bgY < bgImg.height) {
-                
-                // Calculate the index using this formula for both the bg and fg
-                const bgIndex = ((bgY * bgImg.width) + bgX) * 4;
-                const fgIndex = ((y * fgWidth) + x) * 4;
-                
-                // checks if the alpha values are greater than 0 so they can be blended
+            // check if the pixel is within the bounds of the background image
+            if (bgX >= 0 && bgX < bgWidth && bgY >= 0 && bgY < bgHeight) {
+                const fgIndex = (y * fgWidth + x) * 4;
+                const bgIndex = (bgY * bgWidth + bgX) * 4;
+
+                const bgAlpha = bgData[bgIndex + 3] / 255;
+                const fgAlpha = (fgData[fgIndex + 3] / 255) * fgOpac;
+
+                // blend the alpha values
+                const blendedAlpha = fgAlpha + bgAlpha * (1 - fgAlpha);
+
                 if (fgData[fgIndex + 3] > 0) {
-                    bgData[bgIndex] = (fgOpac * fgData[fgIndex]) + ((1 - fgOpac) * bgData[bgIndex]); // Red
-                    bgData[bgIndex + 1] = (fgOpac * fgData[fgIndex + 1]) + ((1 - fgOpac) * bgData[bgIndex + 1]); // Green
-                    bgData[bgIndex + 2] = (fgOpac * fgData[fgIndex + 2]) + ((1 - fgOpac) * bgData[bgIndex + 2]); // Blue
+                    // alpha blending for each color channel (Red, Green, Blue)
+                    bgData[bgIndex] = (fgAlpha * fgData[fgIndex] + bgAlpha * bgData[bgIndex] * (1 - fgAlpha)) / blendedAlpha;
+                    bgData[bgIndex + 1] = (fgAlpha * fgData[fgIndex + 1] + bgAlpha * bgData[bgIndex + 1] * (1 - fgAlpha)) / blendedAlpha;
+                    bgData[bgIndex + 2] = (fgAlpha * fgData[fgIndex + 2] + bgAlpha * bgData[bgIndex + 2] * (1 - fgAlpha)) / blendedAlpha;
+
+                    // update the alpha channel
+                    bgData[bgIndex + 3] = blendedAlpha * 255;
                 }
             }
         }
     }
-   
 }
