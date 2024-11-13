@@ -4,45 +4,41 @@
 // The given projection matrix is also a 4x4 matrix stored as an array in column-major order.
 // You can use the MatrixMult function defined in project4.html to multiply two 4x4 matrices in the same format.
 function GetModelViewProjection(projectionMatrix, translationX, translationY, translationZ, rotationX, rotationY) {
-	// create rotation matrix around the X axis
-	var cosX = Math.cos(rotationX);
-	var sinX = Math.sin(rotationX);
-	var rotationXMatrix = [
-		1,    0,     0, 0,
-		0, cosX, -sinX, 0,
-		0, sinX,  cosX, 0,
-		0,    0,     0, 1
-	];
-
-	// create rotation matrix around the Y axis
-	var cosY = Math.cos(rotationY);
-	var sinY = Math.sin(rotationY);
-	var rotationYMatrix = [
-		cosY, 0, sinY, 0,
-		   0, 1,    0, 0,
-	   -sinY, 0, cosY, 0,
-		   0, 0,    0, 1
-	];
-
-	// combine rotation matrices
-	var rotationMatrix = MatrixMult(rotationYMatrix, rotationXMatrix);
-
-	// create translation matrix
-	var translationMatrix = [
+	// translation matrix
+	var trans = [
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		translationX, translationY, translationZ, 1
 	];
 
-	// combine the translation and rotation matrices to form the model matrix
-	var modelMatrix = MatrixMult(translationMatrix, rotationMatrix);
+	// x-rotation matrix
+	let cosThetaX = Math.cos(rotationX);
+	let sinThetaX = Math.sin(rotationX);
+	var rotX = [
+		1, 0, 0, 0,
+		0, cosThetaX, sinThetaX, 0,
+		0, -sinThetaX, cosThetaX, 0, 
+		0, 0, 0, 1
+	];
 
-	// multiply the projection matrix with the model matrix to get the final MVP matrix
-	var mvpMatrix = MatrixMult(projectionMatrix, modelMatrix);
+	//  y-rotation matrix 
+	let cosThetaY = Math.cos(rotationY);
+	let sinThetaY = Math.sin(rotationY);
+	var rotY = [
+		cosThetaY, 0, -sinThetaY, 0,
+		0, 1, 0, 0,
+		sinThetaY, 0, cosThetaY, 0,
+		0, 0, 0, 1
+	];
 
-	return mvpMatrix;
+	// apply transformations
+	var mvp = MatrixMult(projectionMatrix, trans);
+	mvp = MatrixMult(mvp, rotX);
+	mvp = MatrixMult(mvp, rotY);
+	return mvp;
 }
+
 
 
 
@@ -223,28 +219,25 @@ class MeshDrawer {
 	fragment_shader = `
 		precision highp int;
 		precision highp float;
-
+	
 		uniform bool useTexture;
 		uniform sampler2D textureSampler;
-
+	
 		varying vec2 v_texCoord;
-
+	
 		void main() {
 			vec4 color;
-
+	
 			if (useTexture) {
-				// sample the texture 
 				color = texture2D(textureSampler, v_texCoord);
 			} else {
 				float depth = gl_FragCoord.z; // Window-space depth in [0, 1]
-
-				// find intensity from depth
+	
+				// Adjust default color when texture is not loaded
 				float intensity = pow(depth, 3.0);
-
-				// set color to intensity
-				color = vec4(intensity, 0.0, intensity, 1.0);
+				color = vec4(1.0, intensity, 0.0, 1.0); // Changed from black to a non-black color
 			}
-
+	
 			gl_FragColor = color;
 		}
 	`;
